@@ -21,63 +21,9 @@ function id(){ return crypto.randomBytes(8).toString('hex'); }
 function esc(s=''){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function wrapText(text, max=28, lines=3){ const words=String(text||'').split(/\s+/).filter(Boolean); const result=[]; let line=''; for(const word of words){ const next=line?`${line} ${word}`:word; if(next.length>max){ if(line) result.push(line); line=word; } else line=next; if(result.length>=lines) break; } if(result.length<lines&&line) result.push(line); return result.slice(0,lines); }
 
-async function createImage(draft) {
-  const file = path.join(imageDir, `${draft.id}.png`);
-
-  const title = String(draft.image_title || 'IA + Programação')
-    .replace(/[^\p{L}\p{N}\s+.#-]/gu, '')
-    .slice(0, 48);
-
-  const subtitle = String(draft.image_subtitle || 'Insights práticos para devs')
-    .replace(/[^\p{L}\p{N}\s+.#-]/gu, '')
-    .slice(0, 70);
-
-  const svg = `
-  <svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#020617"/>
-        <stop offset="55%" stop-color="#111827"/>
-        <stop offset="100%" stop-color="#312e81"/>
-      </linearGradient>
-      <radialGradient id="glow" cx="75%" cy="35%" r="60%">
-        <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.65"/>
-        <stop offset="60%" stop-color="#8b5cf6" stop-opacity="0.25"/>
-        <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
-      </radialGradient>
-    </defs>
-
-    <rect width="1200" height="630" fill="url(#bg)"/>
-    <rect width="1200" height="630" fill="url(#glow)"/>
-
-    <circle cx="940" cy="190" r="150" fill="#38bdf8" opacity="0.16"/>
-    <circle cx="1040" cy="430" r="210" fill="#a855f7" opacity="0.13"/>
-
-    <rect x="70" y="70" width="310" height="52" rx="26" fill="#ffffff" opacity="0.12"/>
-    <text x="95" y="104" font-size="24" font-weight="700" fill="#e5e7eb">U6 DEV Store</text>
-
-    <text x="72" y="285" font-size="72" font-weight="900" fill="#ffffff">${title}</text>
-    <text x="76" y="355" font-size="34" fill="#cbd5e1">${subtitle}</text>
-
-    <rect x="76" y="430" width="520" height="3" fill="#38bdf8"/>
-    <text x="76" y="492" font-size="30" font-weight="700" fill="#e5e7eb">IA • Programação • Automação</text>
-
-    <g opacity="0.55">
-      <path d="M785 130 L1080 260 L960 520 L690 400 Z" fill="none" stroke="#38bdf8" stroke-width="4"/>
-      <path d="M840 190 L1010 285 L925 455 L760 360 Z" fill="none" stroke="#a78bfa" stroke-width="3"/>
-      <circle cx="785" cy="130" r="9" fill="#38bdf8"/>
-      <circle cx="1080" cy="260" r="9" fill="#38bdf8"/>
-      <circle cx="960" cy="520" r="9" fill="#a78bfa"/>
-      <circle cx="690" cy="400" r="9" fill="#a78bfa"/>
-    </g>
-  </svg>`;
-
-  await sharp(Buffer.from(svg)).png().toFile(file);
-  return file;
-}
 function previewCaption(draft){ const post=draft.linkedin_post||''; const src=draft.source_url?`\n\nFonte: ${draft.source_url}`:''; return `🧠 Prévia LinkedIn\n\n${post.length>3300?post.slice(0,3300)+'...':post}${src}`; }
 function keyboard(draftId){ return Markup.inlineKeyboard([[Markup.button.callback('✅ Publicar',`publish:${draftId}`)],[Markup.button.callback('✍️ Refazer texto',`redo_text:${draftId}`),Markup.button.callback('🖼 Refazer imagem',`redo_image:${draftId}`)],[Markup.button.callback('🔄 Refazer tudo',`redo_all:${draftId}`)],[Markup.button.callback('❌ Cancelar',`cancel:${draftId}`)]]); }
-async function sendDraftToTelegram(draft){ if(!TELEGRAM_REVIEW_CHAT_ID) throw new Error('Falta TELEGRAM_REVIEW_CHAT_ID no .env'); const img=await createImage(draft); draft.image_path=img; await bot.telegram.sendPhoto(TELEGRAM_REVIEW_CHAT_ID,{source:img},{caption:previewCaption(draft),...keyboard(draft.id)}); }
+async function sendDraftToTelegram(draft){ if(!TELEGRAM_REVIEW_CHAT_ID) throw new Error('Falta TELEGRAM_REVIEW_CHAT_ID no .env'); const  bot.telegram.sendPhoto(TELEGRAM_REVIEW_CHAT_ID,{source:img},{caption:previewCaption(draft),...keyboard(draft.id)}); }
 async function groq(messages,temperature=0.85){ if(!GROQ_API_KEY) throw new Error('Falta GROQ_API_KEY no .env'); const {data}=await axios.post('https://api.groq.com/openai/v1/chat/completions',{model:GROQ_MODEL,temperature,max_tokens:1600,messages},{headers:{Authorization:`Bearer ${GROQ_API_KEY}`,'Content-Type':'application/json'},timeout:60000}); return data.choices?.[0]?.message?.content?.trim()||''; }
 async function redoText(draft){ const content=await groq([{role:'system',content:'Você é um fundador/CTO escrevendo posts fortes para LinkedIn sobre IA, programação, automação, agentes, ferramentas dev e negócios digitais. Seja específico, opinativo e útil.'},{role:'user',content:`Refaça este post para LinkedIn mantendo a fonte, mas deixe mais forte, menos genérico e mais prático.\n\nFonte: ${draft.source_title}\nURL: ${draft.source_url}\nPost atual:\n${draft.linkedin_post}\n\nRegras: português do Brasil, 900 a 1400 caracteres, gancho forte, 3 bullets práticos, opinião clara, pergunta final, 5 a 8 hashtags. Retorne somente o texto final.`}]); draft.linkedin_post=content; draft.updated_at=new Date().toISOString(); return draft; }
 async function redoAll(draft){ const raw=await groq([{role:'system',content:'Você cria posts e conceitos visuais para LinkedIn sobre IA, programação e automação. Retorne somente JSON válido.'},{role:'user',content:`Refaça tudo com mais impacto.\nFonte: ${draft.source_title}\nURL: ${draft.source_url}\nPost atual: ${draft.linkedin_post}\nRetorne JSON: {"linkedin_post":"texto","image_title":"max 52 caracteres","image_subtitle":"max 90 caracteres","image_prompt":"descrição visual"}`}]); const jsonText=raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```$/i,'').trim(); const parsed=JSON.parse(jsonText.match(/\{[\s\S]*\}/)?.[0]||jsonText); draft.linkedin_post=parsed.linkedin_post||draft.linkedin_post; draft.image_title=parsed.image_title||draft.image_title; draft.image_subtitle=parsed.image_subtitle||draft.image_subtitle; draft.image_prompt=parsed.image_prompt||draft.image_prompt; draft.updated_at=new Date().toISOString(); return draft; }
