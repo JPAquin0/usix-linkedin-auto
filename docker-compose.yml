@@ -1,0 +1,11 @@
+services:
+  usix-linkedin-auto:
+    build: .
+    container_name: usix-linkedin-auto
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "3011:3000"
+    volumes:
+      - ./data:/app/data
