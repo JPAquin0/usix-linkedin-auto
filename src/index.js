@@ -21,13 +21,57 @@ function id(){ return crypto.randomBytes(8).toString('hex'); }
 function esc(s=''){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function wrapText(text, max=28, lines=3){ const words=String(text||'').split(/\s+/).filter(Boolean); const result=[]; let line=''; for(const word of words){ const next=line?`${line} ${word}`:word; if(next.length>max){ if(line) result.push(line); line=word; } else line=next; if(result.length>=lines) break; } if(result.length<lines&&line) result.push(line); return result.slice(0,lines); }
 
-async function createImage(draft){
+async function createImage(draft) {
   const file = path.join(imageDir, `${draft.id}.png`);
-  const titleLines = wrapText(draft.image_title || 'IA + Programação', 25, 3);
-  const subtitleLines = wrapText(draft.image_subtitle || 'Atualização importante para devs', 42, 2);
-  const titleSvg = titleLines.map((line,i)=>`<text x="70" y="${245+i*72}" font-size="58" font-weight="800" fill="#ffffff">${esc(line)}</text>`).join('');
-  const subtitleSvg = subtitleLines.map((line,i)=>`<text x="74" y="${505+i*38}" font-size="30" fill="#cbd5e1">${esc(line)}</text>`).join('');
-  const svg = `<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#050816"/><stop offset="45%" stop-color="#111827"/><stop offset="100%" stop-color="#1e1b4b"/></linearGradient><radialGradient id="glow" cx="70%" cy="30%" r="55%"><stop offset="0%" stop-color="#38bdf8" stop-opacity="0.55"/><stop offset="55%" stop-color="#8b5cf6" stop-opacity="0.20"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/></radialGradient><filter id="blur"><feGaussianBlur stdDeviation="35"/></filter></defs><rect width="1200" height="630" fill="url(#bg)"/><rect width="1200" height="630" fill="url(#glow)"/><circle cx="985" cy="155" r="125" fill="#22d3ee" opacity="0.18" filter="url(#blur)"/><circle cx="900" cy="460" r="190" fill="#a855f7" opacity="0.14" filter="url(#blur)"/><path d="M780 80 L1080 220 L980 520 L690 420 Z" fill="none" stroke="#38bdf8" stroke-opacity="0.28" stroke-width="3"/><path d="M820 130 L1045 260 L930 470 L720 360 Z" fill="none" stroke="#a78bfa" stroke-opacity="0.30" stroke-width="2"/><g opacity="0.34"><circle cx="780" cy="80" r="8" fill="#38bdf8"/><circle cx="1080" cy="220" r="8" fill="#38bdf8"/><circle cx="980" cy="520" r="8" fill="#a78bfa"/><circle cx="690" cy="420" r="8" fill="#a78bfa"/></g><rect x="64" y="64" width="310" height="54" rx="27" fill="#ffffff" opacity="0.10"/><text x="88" y="100" font-size="25" font-weight="700" fill="#e5e7eb">${esc(BRAND_NAME)}</text>${titleSvg}${subtitleSvg}<rect x="70" y="570" width="470" height="1" fill="#38bdf8" opacity="0.45"/><text x="70" y="604" font-size="24" fill="#94a3b8">${esc(BRAND_FOOTER)}</text></svg>`;
+
+  const title = String(draft.image_title || 'IA + Programação')
+    .replace(/[^\p{L}\p{N}\s+.#-]/gu, '')
+    .slice(0, 48);
+
+  const subtitle = String(draft.image_subtitle || 'Insights práticos para devs')
+    .replace(/[^\p{L}\p{N}\s+.#-]/gu, '')
+    .slice(0, 70);
+
+  const svg = `
+  <svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#020617"/>
+        <stop offset="55%" stop-color="#111827"/>
+        <stop offset="100%" stop-color="#312e81"/>
+      </linearGradient>
+      <radialGradient id="glow" cx="75%" cy="35%" r="60%">
+        <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.65"/>
+        <stop offset="60%" stop-color="#8b5cf6" stop-opacity="0.25"/>
+        <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+
+    <rect width="1200" height="630" fill="url(#bg)"/>
+    <rect width="1200" height="630" fill="url(#glow)"/>
+
+    <circle cx="940" cy="190" r="150" fill="#38bdf8" opacity="0.16"/>
+    <circle cx="1040" cy="430" r="210" fill="#a855f7" opacity="0.13"/>
+
+    <rect x="70" y="70" width="310" height="52" rx="26" fill="#ffffff" opacity="0.12"/>
+    <text x="95" y="104" font-size="24" font-weight="700" fill="#e5e7eb">U6 DEV Store</text>
+
+    <text x="72" y="285" font-size="72" font-weight="900" fill="#ffffff">${title}</text>
+    <text x="76" y="355" font-size="34" fill="#cbd5e1">${subtitle}</text>
+
+    <rect x="76" y="430" width="520" height="3" fill="#38bdf8"/>
+    <text x="76" y="492" font-size="30" font-weight="700" fill="#e5e7eb">IA • Programação • Automação</text>
+
+    <g opacity="0.55">
+      <path d="M785 130 L1080 260 L960 520 L690 400 Z" fill="none" stroke="#38bdf8" stroke-width="4"/>
+      <path d="M840 190 L1010 285 L925 455 L760 360 Z" fill="none" stroke="#a78bfa" stroke-width="3"/>
+      <circle cx="785" cy="130" r="9" fill="#38bdf8"/>
+      <circle cx="1080" cy="260" r="9" fill="#38bdf8"/>
+      <circle cx="960" cy="520" r="9" fill="#a78bfa"/>
+      <circle cx="690" cy="400" r="9" fill="#a78bfa"/>
+    </g>
+  </svg>`;
+
   await sharp(Buffer.from(svg)).png().toFile(file);
   return file;
 }
